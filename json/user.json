@@ -1,0 +1,20 @@
+[
+  {
+    "id": "911ec8b7-1e63-4e3c-a7dd-2c3695e606d0",
+    "username": "tranluan",
+    "password": "scrypt:32768:8:1$oSLO4OdB0C1mqywB$c09641208d15c6784dafaf214dd86ba61dbe2a3f39ff955b6551d6cc3bae9681f10ffb0b70301b3418dc97b63d9b3eb282cf86d4f180e1fcf10d3798d00fb62e",
+    "role": "admin"
+  },
+  {
+    "id": "8f2b6629-cb3b-438c-90fd-9eef81da953e",
+    "username": "luandeptrai",
+    "password": "scrypt:32768:8:1$ut9axLVSmMJC9rsY$d8ee90865bee1ed5f3b499e73cda861cc0f11b6bae50b95ec26b4e16ebc31096c12f1058c3d24324d8f9a44ef35be258a38340b4f2aa71e2cac23650cdf74dd6",
+    "role": "user"
+  },
+  {
+    "id": "a133d5ee-03c5-4d56-b492-9cd0896f24a4",
+    "username": "vip01",
+    "password": "scrypt:32768:8:1$NgAQ9iYK65CmFCpw$69a103d7244fd36e6b148de9abe3646d742ebc87ac6516bfa49f3e3476d711cfefc77595d1401d7d81e896a25d495fd1fb0c899f34d80cf8e0d166e9f8ca5796",
+    "role": "admin"
+  }
+]

@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Token{% endblock %}
+
+{% block extra_css %}
+<style>
+    .token-list {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .token-list th,
+    .token-list td {
+        border: 1px solid #e2e8f0;
+        padding: 8px;
+        text-align: left;
+    }
+
+    .token-list th {
+        background-color: #f8fafc;
+    }
+
+    .token-list tr:nth-child(even) {
+        background-color: #f1f5f9;
+    }
+
+    .truncate {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    h2 {
+        position: relative;
+    }
+
+    #addTokenBtn {
+        position: absolute;
+        font-size: 1rem;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    button:disabled {
+        color: #ccc;
+        background-color: #eee;
+        border: none;
+        cursor: not-allowed;
+    }
+
+    button:disabled:hover {
+        color: #ccc;
+        background-color: #eee;
+        border: none;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 770px) {
+        body {
+            font-size: 2.3vw;
+        }
+
+        h2 {
+            font-size: 3.5vw !important;
+        }
+
+        #addTokenBtn {
+            font-size: 2vw;
+            line-height: 2vw;
+        }
+
+        .token-list {
+            flex: 1;
+        }
+
+        .token-list thead {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .token-list #tokenTableBody {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .token-list tr {
+            display: flex;
+        }
+
+        .token-list tr,
+        .token-list th,
+        .token-list td {
+            flex: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Danh sách tài khoản
+        <button id="addTokenBtn"
+            class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out mr-2">
+            Thêm tài khoản
+        </button>
+    </h2>
+    <table class="token-list">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Re Token</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody id="tokenTableBody">
+            <!-- Token dữ liệu sẽ được thêm động ở đây -->
+        </tbody>
+    </table>
+    <div class="flex items-center justify-between mt-4">
+        <div>
+            <button id="refreshBtn"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out mr-2">
+                Làm mới Tokens ngay lập tức
+            </button>
+        </div>
+        <p id="statusMessage" class="italic"></p>
+    </div>
+</div>
+
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Cài đặt làm mới Access Token</h2>
+    <div class="flex items-center mb-4">
+        <input type="checkbox" id="autoRefreshToggle" class="mr-2">
+        <label for="autoRefreshToggle" class="mr-4">Bật tự động làm mới</label>
+        <input type="number" id="refreshInterval" min="1" value="1" class="border rounded px-2 py-1 w-20 mr-2">
+        <span>ngày</span>
+    </div>
+    <p id="nextRefreshTime" class="text-gray-600"></p>
+</div>
+
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Tài khoản làm mới Refresh Token thất bại</h2>
+    <details class="mb-4">
+        <summary class="cursor-pointer text-blue-600 hover:text-blue-800">Nhấn để xem</summary>
+        <div id="failedTokens" class="mt-2 space-y-1">
+            <!-- Tokens thất bại sẽ được thêm động ở đây -->
+        </div>
+    </details>
+</div>
+
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Lịch sử làm mới</h2>
+    <details class="mb-4">
+        <summary class="cursor-pointer text-blue-600 hover:text-blue-800">Nhấn để xem</summary>
+        <div id="refreshHistory" class="space-y-2">
+            <!-- Lịch sử làm mới sẽ được thêm động ở đây -->
+        </div>
+    </details>
+    
+</div>
+
+<div id="tokenModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Thông tin tài khoản</h3>
+            <form id="tokenForm">
+                <input type="hidden" id="id">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                        Email
+                    </label>
+                    <input
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="email" type="text" required placeholder="Chỉ dùng để nhận diện">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="ReToken">
+                        Refresh Token
+                    </label>
+                    <input
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="ReToken" type="text" placeholder="Có thể để trống">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="acToken">
+                        Access Token
+                    </label>
+                    <input
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="AcToken" type="text" placeholder="Bắt buộc nếu không có Refresh Token">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="PLUS">
+                        PLUS
+                    </label>
+                    <select
+                        class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="PLUS" required>
+                        <option value='false'>false</option>
+                        <option value='true'>true</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="button" onclick="closeModal()"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+{% block extra_js %}
+
+<script>
+
+function loadTokens() {
+            fetch('/get_tokens')
+                .then(response => response.json())
+                .then(data => {
+                    tokens = data
+                    tokenTableBody.innerHTML = '';
+                    data.forEach(token => {
+                        let rt = 'Có'
+                        if (!token.refresh_token) {
+                            rt = 'Không'
+                        }
+                        let recolor = token.refresh_token ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        let color = token.status ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                        <td class="truncate">${token.email}</td>
+                        <td class="truncate" ${recolor}>${rt}</td>
+                        <td class="truncate"  ${color}>${token.status ? 'Hiệu lực' : 'Hết hiệu lực'}</td>
+                        <td>
+                            <button onclick="editUser('${token.email}')" class="text-blue-600 hover:text-blue-900 mr-4">Chỉnh sửa</button>
+                            <button onclick="deleteUser('${token.email}')" class="text-red-600 hover:text-red-900">Xóa</button>
+                        </td>
+                    `;
+                        tokenTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Tải Tokens thất bại:', error);
+                    showStatus('Tải Tokens thất bại', 'error');
+                });
+        }
+
+    let tokens = []
+        const modal = document.getElementById('tokenModal');
+        const tokenForm = document.getElementById('tokenForm');
+        const addTokenBtn = document.getElementById('addTokenBtn');
+
+        // Mở modal
+        function openModal(email = null) {
+            const form = document.getElementById('tokenForm');
+            if (email) {
+                document.getElementById('id').value = 'id'
+                document.getElementById('email').value = email.email;
+                document.getElementById('ReToken').value = email.refresh_token;
+                document.getElementById('AcToken').value = email.access_token;
+                document.getElementById('PLUS').value = email.PLUS;
+            } else {
+                form.reset();
+                document.getElementById('id').value = ''
+            }
+            modal.classList.remove('hidden');
+        }
+
+        // Đóng modal
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        // Chỉnh sửa người dùng
+        function editUser(email) {
+            const tkemail = tokens.find(u => u.email === email);
+            if (tkemail) {
+                openModal(tkemail);
+            }
+        }
+
+        // Xóa người dùng
+        function deleteUser(email) {
+            if (confirm('Bạn có chắc chắn muốn xóa tài khoản này không?')) {
+                fetch(`/api/tokens/${email}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadTokens();
+                        }
+                    })
+                    .catch(error => console.error('Lỗi:', error));
+            }
+        }
+
+        // Xử lý gửi form
+        tokenForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const Id = document.getElementById('id').value;
+            const tkemail = document.getElementById('email').value
+            const retoken = document.getElementById('ReToken').value
+            const actoken = document.getElementById('AcToken').value
+            const plus = document.getElementById('PLUS').value
+            if(!(retoken || actoken)){
+                alert('Phải có một Refresh Token hoặc Access Token')
+                return
+            }
+            const tkData = {
+                email: document.getElementById('email').value,
+                ReToken: retoken,
+                AcToken: actoken,
+                PLUS: plus
+            };
+
+            const url = Id ? `/api/tokens/${tkemail}` : '/api/tokens';
+            const method = Id ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(tkData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal();
+                        loadTokens();
+                    }
+                })
+                .catch(error => console.error('Lỗi:', error));
+        });
+
+        // Sự kiện click nút thêm người dùng
+        addTokenBtn.addEventListener('click', () => openModal());
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tokenTableBody = document.getElementById('tokenTableBody');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+        const refreshInterval = document.getElementById('refreshInterval');
+        const nextRefreshTime = document.getElementById('nextRefreshTime');
+        const refreshHistory = document.getElementById('refreshHistory');
+
+        function loadTokens() {
+            fetch('/get_tokens')
+                .then(response => response.json())
+                .then(data => {
+                    tokens = data
+                    tokenTableBody.innerHTML = '';
+                    data.forEach(token => {
+                        let rt = 'Có'
+                        if (!token.refresh_token) {
+                            rt = 'Không'
+                        }
+                        let recolor = token.refresh_token ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        let color = token.status ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                        <td class="truncate">${token.email}</td>
+                        <td class="truncate" ${recolor}>${rt}</td>
+                        <td class="truncate"  ${color}>${token.status ? 'Hiệu lực' : 'Hết hiệu lực'}</td>
+                        <td>
+                            <button onclick="editUser('${token.email}')" class="text-blue-600 hover:text-blue-900 mr-4">Chỉnh sửa</button>
+                            <button onclick="deleteUser('${token.email}')" class="text-red-600 hover:text-red-900">Xóa</button>
+                        </td>
+                    `;
+                        tokenTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Tải Tokens thất bại:', error);
+                    showStatus('Tải Tokens thất bại', 'error');
+                });
+        }
+
+        function loadFailedTokens() {
+            fetch('/get_failed_tokens')
+                .then(response => response.json())
+                .then(data => {
+                    const failedTokensDiv = document.getElementById('failedTokens');
+                    failedTokensDiv.innerHTML = '';
+                    data.forEach(item => {
+                        const email = item.email;
+                        const tokenItem = document.createElement('div');
+                        tokenItem.className = 'bg-red-100 p-2 rounded';
+                        tokenItem.textContent = email;
+                        failedTokensDiv.appendChild(tokenItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Tải thất bại Refresh Token thất bại:', error);
+                    showStatus('Tải thất bại Tokens thất bại', 'error');
+                });
+        }
+
+        function updateAutoRefreshUI(config) {
+            autoRefreshToggle.checked = config.auto_refresh_enabled;
+            refreshInterval.value = config.refresh_interval_days;
+            if (config.next_refresh_time) {
+                nextRefreshTime.textContent = `Thời gian làm mới tiếp theo: ${new Date(config.next_refresh_time).toLocaleString()}`;
+            } else {
+                nextRefreshTime.textContent = 'Tự động làm mới đã tắt';
+            }
+        }
+
+        function loadAutoRefreshConfig() {
+            fetch('/get_auto_refresh_config')
+                .then(response => response.json())
+                .then(config => {
+                    updateAutoRefreshUI(config);
+                })
+                .catch(error => {
+                    console.error('Tải cấu hình tự động làm mới thất bại:', error);
+                    showStatus('Tải cấu hình tự động làm mới thất bại', 'error');
+                });
+        }
+
+        function saveAutoRefreshConfig() {
+            fetch('/set_auto_refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    enabled: autoRefreshToggle.checked,
+                    interval: parseInt(refreshInterval.value)
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showStatus('Cấu hình tự động làm mới đã được cập nhật', 'success');
+                        loadAutoRefreshConfig();
+                    } else {
+                        showStatus('Cập nhật cấu hình tự động làm mới thất bại', 'error');
+                    }
+                })
+                .catch(error => {
+                    showStatus('Cập nhật cấu hình tự động làm mới thất bại', 'error');
+                });
+        }
+
+        function refreshTokens() {
+            refreshBtn.disabled = true;
+            fetch('/refresh_tokens', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        refreshBtn.disabled = false;
+                        showStatus('Làm mới Tokens thành công', 'success');
+                        loadTokens();
+                        loadRefreshHistory();
+                        loadAutoRefreshConfig();
+                        loadFailedTokens();
+                    } else {
+                        refreshBtn.disabled = false;
+                        showStatus('Làm mới Tokens thất bại: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    refreshBtn.disabled = false;
+                    showStatus('Làm mới Tokens thất bại', 'error');
+                });
+        }
+
+        function loadRefreshHistory() {
+            fetch('/refresh_history')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        refreshHistory.innerHTML = '';
+                        data.history.forEach(item => {
+                            const historyItem = document.createElement('div');
+                            historyItem.className = 'bg-gray-100 p-2 rounded';
+                            historyItem.innerHTML = `
+                            <p><strong>Thời gian làm mới:</strong> ${new Date(item.timestamp).toLocaleString()}</p>
+                            <p><strong>Số lượng Token:</strong> ${item.token_count}</p>
+                        `;
+                            refreshHistory.appendChild(historyItem);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Tải lịch sử làm mới thất bại:', error);
+                    showStatus('Tải lịch sử làm mới thất bại', 'error');
+                });
+        }
+
+        function showStatus(message, status) {
+            statusMessage.textContent = message;
+            statusMessage.className = status === 'success' ? 'text-green-600' : 'text-red-600';
+            setTimeout(() => {
+                statusMessage.textContent = '';
+            }, 3000);
+        }
+
+
+        refreshBtn.addEventListener('click', refreshTokens);
+        autoRefreshToggle.addEventListener('change', saveAutoRefreshConfig);
+        refreshInterval.addEventListener('change', saveAutoRefreshConfig);
+
+
+        // Khởi tạo
+        loadTokens();
+        loadAutoRefreshConfig();
+        loadRefreshHistory();
+        loadFailedTokens();
+    });
+</script>
+{% endblock %}

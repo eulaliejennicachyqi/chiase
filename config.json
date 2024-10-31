@@ -1,0 +1,5 @@
+{
+    "secret_key": "your_admin_secret_key",
+    "domain_chatgpt": "caonho.new.oaifree.com",
+    "domain_claude": "demo.fuclaude.com"
+}
